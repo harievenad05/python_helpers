@@ -114,7 +114,7 @@ def print_train_time(start, end, device=None):
     """Prints difference between start and end time.
 
     Args:
-        start (float): Start time of computation (preferred in timeit format). 
+        start (float): Start time of computation (preferred in timeit format).
         end (float): End time of computation.
         device ([type], optional): Device that compute is running on. Defaults to None.
 
@@ -185,7 +185,7 @@ def pred_and_plot_image(
         class_names (List[str], optional): different class names for target image. Defaults to None.
         transform (_type_, optional): transform of target image. Defaults to None.
         device (torch.device, optional): target device to compute on. Defaults to "cuda" if torch.cuda.is_available() else "cpu".
-    
+
     Returns:
         Matplotlib plot of target image and model prediction as title.
 
@@ -247,7 +247,7 @@ def set_seeds(seed: int=42):
     # Set the seed for CUDA torch operations (ones that happen on the GPU)
     torch.cuda.manual_seed(seed)
 
-def download_data(source: str, 
+def download_data(source: str,
                   destination: str,
                   remove_source: bool = True) -> Path:
     """Downloads a zipped dataset from source and unzips to destination.
@@ -256,10 +256,10 @@ def download_data(source: str,
         source (str): A link to a zipped file containing data.
         destination (str): A target directory to unzip data to.
         remove_source (bool): Whether to remove the source after downloading and extracting.
-    
+
     Returns:
         pathlib.Path to downloaded data.
-    
+
     Example usage:
         download_data(source="https://github.com/mrdbourke/pytorch-deep-learning/raw/main/data/pizza_steak_sushi.zip",
                       destination="pizza_steak_sushi")
@@ -268,13 +268,13 @@ def download_data(source: str,
     data_path = Path("data/")
     image_path = data_path / destination
 
-    # If the image folder doesn't exist, download it and prepare it... 
+    # If the image folder doesn't exist, download it and prepare it...
     if image_path.is_dir():
         print(f"[INFO] {image_path} directory exists, skipping download.")
     else:
         print(f"[INFO] Did not find {image_path} directory, creating one...")
         image_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Download pizza, steak, sushi data
         target_file = Path(source).name
         with open(data_path / target_file, "wb") as f:
@@ -284,11 +284,84 @@ def download_data(source: str,
 
         # Unzip pizza, steak, sushi data
         with zipfile.ZipFile(data_path / target_file, "r") as zip_ref:
-            print(f"[INFO] Unzipping {target_file} data...") 
+            print(f"[INFO] Unzipping {target_file} data...")
             zip_ref.extractall(image_path)
 
         # Remove .zip file
         if remove_source:
             os.remove(data_path / target_file)
-    
+
     return image_path
+
+
+def test_step_with_data_loader(model: torch.nn.Module,
+                               data_loader: torch.utils.data.DataLoader,
+                               loss_fn: torch.nn.Module,
+                               accuracy_fn,
+                               device: torch.device = device):
+
+    """ This method can be used to perform test step for models with Data Loader
+    Args:
+            model (torch.nn.Module): trained PyTorch image classification model.
+            data_loader (torch.utils.data.DataLoader): test data loader of type torch.utils.data.DataLoader.
+            loss_fn (torch.nn.Module): loss function to calculate the test loss.
+            accuracy_fn: accuracy function to calculate accuracy.
+            device (torch.device, optional): target device to compute on. Defaults to "cuda" if torch.cuda.is_available() else "cpu".
+    """
+    test_loss, test_acc = 0, 0
+    model.eval()
+    with torch.inference_mode():
+        for X, y in data_loader:
+            # Send data to GPU
+            X, y = X.to(device), y.to(device)
+
+            # 1. Forward pass
+            test_pred = model(X)
+
+            # 2. calculate the loss
+            test_loss += loss_fn(test_pred, y)
+
+            # Calculate accuracy
+            test_acc = accuracy_fn(y_true=y,
+                                    y_pred=test_pred.argmax(dim=1))
+
+            # Adjust metrics and print out
+            test_loss /= len(data_loader)
+            test_acc /= len(data_loader)
+        print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+
+
+def train_step_with_data_loader(model: torch.nn.Module,
+                                data_loader: torch.utils.data.DataLoader,
+                                loss_fn: torch.nn.Module,
+                                optimizer: torch.optim.Optimizer,
+                                accuracy_fn,
+                                device: torch.device = device):
+    train_loss, train_acc = 0, 0
+    model.train()
+    for batch, (X, y) in enumerate(data_loader):
+        # Send data to GPU
+        X, y = X.to(device), y.to(device)
+
+        # 1. Forward pass
+        y_pred = model(X)
+
+        # 2. Calculate loss
+        loss = loss_fn(y_pred, y)
+        train_loss += loss
+        train_acc += accuracy_fn(y_true=y,
+                                y_pred=y_pred.argmax(dim=1))
+
+        # 3. Optimizer zero grad
+        optimizer.zero_grad()
+
+        # 4. Loss bacwards
+        loss.backward()
+
+        # 5. Optimizer step
+        optimizer.step()
+
+    # Calculate loss and accuracy per epoch and print out what's happening
+    train_loss /= len(data_loader)
+    train_acc /= len(data_loader)
+    print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
