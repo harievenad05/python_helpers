@@ -298,7 +298,7 @@ def test_step_with_data_loader(model: torch.nn.Module,
                                data_loader: torch.utils.data.DataLoader,
                                loss_fn: torch.nn.Module,
                                accuracy_fn,
-                               device: torch.device = device):
+                               device: torch.device = "cuda" if torch.cuda.is_available() else "cpu"):
 
     """ This method can be used to perform test step for models with Data Loader
     Args:
@@ -336,7 +336,7 @@ def train_step_with_data_loader(model: torch.nn.Module,
                                 loss_fn: torch.nn.Module,
                                 optimizer: torch.optim.Optimizer,
                                 accuracy_fn,
-                                device: torch.device = device):
+                                device: torch.device = "cuda" if torch.cuda.is_available() else "cpu"):
     train_loss, train_acc = 0, 0
     model.train()
     for batch, (X, y) in enumerate(data_loader):
