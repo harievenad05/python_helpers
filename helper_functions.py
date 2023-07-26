@@ -366,19 +366,23 @@ def train_step_with_data_loader(model: torch.nn.Module,
     train_acc /= len(data_loader)
     print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
 
-def find_avg_variance_sd(input=None):
+def find_avg_variance_sdd(input=None):
     """
     Pass the list to find the mean, variance and standard deviation
     """
-    avg = sum(input) / len(input)
-    sd_list = []
-    for i in iter(input):
-        mean = (i - int(avg))**2
-        sd_list.append(mean)
-
-    if len(sd_list) > 0:
-        variance = sum(sd_list) / (len(sd_list) - 1)
-        sd = round(variance**(1/2), 2)
-        return {"mean": avg,
-                "variance": variance,
-                "sd": sd}
+    if not input:
+        return f"input should not be {input}"
+    elif len(input) == 1:
+        return input[0]
+    else:
+        avg = sum(input) / len(input)
+        sd_list = []
+        for i in iter(input):
+            mean = (i - int(avg))**2
+            sd_list.append(mean)
+        if len(sd_list) > 0:
+            variance = sum(sd_list) / (len(sd_list) - 1)
+            sd = round(variance**(1/2), 2)
+            return {"mean": avg,
+                    "variance": variance,
+                    "sd": sd}
